@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Simple Library</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #e6f2ff;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .box {
+      max-width: 900px;
+      margin: auto;
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0px 0px 12px #888888;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px 2px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+    }
+
+    input {
+      padding: 10px;
+      margin: 5px 0;
+      width: calc(100% - 22px);
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #d9eaff;
+    }
+
+    #formArea {
+      margin-top: 15px;
+    }
+
+    .button-row {
+      text-align: center;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box" id="mainApp">
+  <h2>📚 My Library System</h2>
+
+  <div class="button-row">
+    <button class="btn" onclick="showForm('add')">Add Book</button>
+    <button class="btn" onclick="showForm('search')">Search / Update</button>
+    <button class="btn" onclick="showForm('delete')">Delete Book</button>
+    <button class="btn" onclick="showForm('issue')">Request Issue</button>
+    <button class="btn" onclick="processIssue()">Process Issue</button>
+    <button class="btn" onclick="returnBook()">Return Book</button>
+    <button class="btn" onclick="showBooks()">Show Books</button>
+  </div>
+
+  <div class="button-row">
+    <button class="btn" onclick="sortBooks('id')">Sort by ID</button>
+    <button class="btn" onclick="sortBooks('title')">Sort by Title</button>
+    <button class="btn" onclick="sortBooks('author')">Sort by Author</button>
+  </div>
+
+  <div id="formArea"></div>
+  <div id="bookTable"></div>
+</div>
+
+<script>
+// BOOK CLASS
+class Book {
+  constructor(id, title, author) {
+    this.id = id;
+    this.title = title;
+    this.author = author;
+    this.available = true;
+    this.next = null;
+  }
+}
+
+// LINKED LIST
+class BookList {
+  constructor() { this.head = null; }
+
+  addBook(id, title, author) {
+    let newBook = new Book(id, title, author);
+    if (!this.head) this.head = newBook;
+    else {
+      let temp = this.head;
+      while (temp.next) temp = temp.next;
+      temp.next = newBook;
+    }
+  }
+
+  findBook(id) {
+    let temp = this.head;
+    while (temp) {
+      if (temp.id === id) return temp;
+      temp = temp.next;
+    }
+    return null;
+  }
+
+  deleteBook(id) {
+    if (!this.head) return;
+    if (this.head.id === id) { this.head = this.head.next; return; }
+    let prev = this.head;
+    let curr = this.head.next;
+    while (curr) {
+      if (curr.id === id) { prev.next = curr.next; return; }
+      prev = curr;
+      curr = curr.next;
+    }
+  }
+
+  getAllBooks() {
+    let books = [];
+    let temp = this.head;
+    while (temp) { books.push(temp); temp = temp.next; }
+    return books;
+  }
+}
+
+// QUEUE
+class Queue {
+  constructor() { this.items = []; }
+  enqueue(data) { this.items.push(data); }
+  dequeue() { return this.items.shift(); }
+  isEmpty() { return this.items.length === 0; }
+}
+
+let library = new BookList();
+let issueQueue = new Queue();
+
+// UI HANDLERS
+function showForm(type) {
+  let html = "";
+  if (type === "add") {
+    html = `
+      <h3>Add Book</h3>
+      <input id="bid" placeholder="ID">
+      <input id="btitle" placeholder="Title">
+      <input id="bauthor" placeholder="Author">
+      <button class="btn" onclick="addBook()">Add</button>
+    `;
+  }
+  else if (type === "search") {
+    html = `
+      <h3>Search Book</h3>
+      <input id="sid" placeholder="Book ID">
+      <button class="btn" onclick="searchBook()">Search</button>
+      <div id="searchResult"></div>
+    `;
+  }
+  else if (type === "delete") {
+    html = `
+      <h3>Delete Book</h3>
+      <input id="did" placeholder="Book ID">
+      <button class="btn" onclick="deleteBook()">Delete</button>
+    `;
+  }
+  else if (type === "issue") {
+    html = `
+      <h3>Request Issue</h3>
+      <input id="uname" placeholder="Student Name">
+      <input id="ureg" placeholder="Registration Number">
+      <input id="ubid" placeholder="Book ID">
+      <button class="btn" onclick="requestIssue()">Request</button>
+    `;
+  }
+
+  document.getElementById("formArea").innerHTML = html;
+}
+
+function addBook() {
+  let id = document.getElementById("bid").value;
+  let title = document.getElementById("btitle").value;
+  let author = document.getElementById("bauthor").value;
+
+  if(id && title && author) {
+    library.addBook(id, title, author);
+    alert("Book Added Successfully!");
+    showBooks();
+  }
+}
+
+function searchBook() {
+  let id = document.getElementById("sid").value;
+  let book = library.findBook(id);
+  if(book) {
+    document.getElementById("searchResult").innerHTML = `
+      <input id="newTitle" value="${book.title}">
+      <input id="newAuthor" value="${book.author}">
+      <button class="btn" onclick="updateBook('${id}')">Update</button>
+    `;
+  } else {
+    document.getElementById("searchResult").innerHTML = `<p>Book not found.</p>`;
+  }
+}
+
+function updateBook(id) {
+  let book = library.findBook(id);
+  if(book) {
+    book.title = document.getElementById("newTitle").value;
+    book.author = document.getElementById("newAuthor").value;
+    alert("Book Updated!");
+    showBooks();
+  }
+}
+
+function deleteBook() {
+  let id = document.getElementById("did").value;
+  library.deleteBook(id);
+  alert("Book Deleted!");
+  showBooks();
+}
+
+function sortBooks(type) {
+  let books = library.getAllBooks();
+  if(type === "id") books.sort((a,b) => a.id.localeCompare(b.id));
+  if(type === "title") books.sort((a,b) => a.title.localeCompare(b.title));
+  if(type === "author") books.sort((a,b) => a.author.localeCompare(b.author));
+
+  let tempList = new BookList();
+  books.forEach(b => tempList.addBook(b.id, b.title, b.author));
+  library = tempList;
+
+  showBooks();
+}
+
+function showBooks() {
+  let books = library.getAllBooks();
+  let html = `<h3>Total Books: ${books.length}</h3>
+  <table>
+  <tr><th>ID</th><th>Title</th><th>Author</th><th>Status</th></tr>`;
+
+  books.forEach(b => {
+    html += `<tr>
+      <td>${b.id}</td>
+      <td>${b.title}</td>
+      <td>${b.author}</td>
+      <td>${b.available ? 'Available' : 'Issued'}</td>
+    </tr>`;
+  });
+
+  html += "</table>";
+  document.getElementById("bookTable").innerHTML = html;
+}
+
+function requestIssue() {
+  let name = document.getElementById("uname").value;
+  let regNo = document.getElementById("ureg").value;
+  let id = document.getElementById("ubid").value;
+
+  let book = library.findBook(id);
+  if(book && book.available) {
+    issueQueue.enqueue({name, regNo, id});
+    alert("Issue Request Added!");
+  } else {
+    alert("Not Available / Invalid Entry.");
+  }
+}
+
+function processIssue() {
+  if(issueQueue.isEmpty()) {
+    alert("No Requests.");
+    return;
+  }
+  let {name, regNo, id} = issueQueue.dequeue();
+  let book = library.findBook(id);
+  if(book) {
+    book.available = false;
+    alert(`Book issued to ${name} (Reg: ${regNo})`);
+    showBooks();
+  }
+}
+
+function returnBook() {
+  let reg = prompt("Enter Registration No:");
+  let id = prompt("Enter Book ID:");
+
+  let book = library.findBook(id);
+  if(book && !book.available) {
+    book.available = true;
+    alert("Book Returned Successfully!");
+    showBooks();
+  } else {
+    alert("Invalid Return.");
+  }
+}
+</script>
+
+</body>
+</html>
